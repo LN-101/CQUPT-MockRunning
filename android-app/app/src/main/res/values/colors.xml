@@ -16,4 +16,5 @@
     <color name="danger_bg">#1AD14343</color>
     <color name="danger_box_bg">#FCEBEB</color>
     <color name="danger_stroke">#F0AEAE</color>
+    <color name="nav_bg">#D9FFFFFF</color>
 </resources>

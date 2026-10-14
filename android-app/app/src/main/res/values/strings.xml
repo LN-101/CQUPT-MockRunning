@@ -3,11 +3,16 @@
     <!-- 名字 -->
     <string name="app_name">鲸鲸约跑</string>
     <string name="app_title">鲸鲸约跑</string>
+    <string name="app_tag" translatable="false">CAMPUS RUN</string>
     <string name="app_sub">替你跑完这两公里 · 你只管去刷脸</string>
     <string name="app_author" translatable="false">WilliTourt的蓝色大肥鱼</string>
     <string name="credit">由 WilliTourt的蓝色大肥鱼 🐟 编写</string>
 
-    <!-- 顶栏 / 导航 -->
+    <!-- 顶栏 / 悬浮导航栏 -->
+    <string name="nav_run">主页</string>
+    <string name="nav_stats">统计</string>
+    <string name="nav_start">上手</string>
+    <string name="nav_settings">设置</string>
     <string name="settings">设置</string>
     <string name="log_page">日志</string>
     <string name="back">返回</string>
@@ -40,10 +45,10 @@
     <string name="b_share">导出</string>
     <string name="b_copy">复制</string>
 
-    <!-- 配速容差 -->
-    <string name="l_pace_tol">平均配速容差（秒/公里）</string>
+    <!-- 配速抖动 -->
+    <string name="l_pace_tol">配速抖动（秒/公里）</string>
     <string name="pace_window">平均配速会被夹在 %1$s ~ %2$s 之间</string>
-    <string name="pace_window_bad">配速或容差格式不对</string>
+    <string name="pace_window_bad">配速或抖动格式不对</string>
     <string name="log_hint_short">日志已移到右上角【日志】页。</string>
 
     <!-- 仪表盘 -->
@@ -100,7 +105,7 @@
     <string name="need_openid">先填 openid</string>
     <string name="bad_pace">配速格式不对，示例 5:45</string>
     <string name="bad_dist">距离格式不对，示例 2.0</string>
-    <string name="bad_tol">容差格式不对，填秒数，示例 20</string>
+    <string name="bad_tol">抖动格式不对，填秒数，示例 20</string>
     <string name="need_area">还没有场地，先点「连接并拉取场地」</string>
     <string name="stopping">正在停止，当前批次传完就停</string>
     <string name="log_cleared">只清了显示，RunController 里还留着最近 400 行</string>

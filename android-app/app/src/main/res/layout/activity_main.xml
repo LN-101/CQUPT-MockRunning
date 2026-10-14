@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  主页：只放打卡相关设置。
-  openid 输入、统计、取码、教程、说明、开源仓库全部在【设置】里；
-  运行日志在【日志】页。右上角两个小图标分别进入这两页。
+  主界面：共享顶栏 + 四页内容 + 悬浮切换栏。
+
+  四页是同一 Activity 里的四个 panel（不引 Fragment / 导航库，守住「零第三方依赖」）：
+      主页  打卡参数与仪表盘
+      统计  成绩表
+      上手  使用教程 / openid / 取码
+      设置  主题 / 说明 / 开源仓库 / 署名
+
+  悬浮栏放在 FrameLayout 里（layout_gravity=bottom），所以它是真的浮在内容之上；
+  每个 panel 的 ScrollView 都留了 92dp 底边距，内容不会被盖住。
+
+  跑步线程归 RunController 单例所有，切页只是切可见性，不影响正在跑的打卡。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -11,27 +20,61 @@
     android:background="@color/bg"
     android:orientation="vertical">
 
-    <!-- ═══════════ 固定顶栏 ═══════════ -->
+    <!-- ═══════════ 共享顶栏：四页都一样，切换时不动 ═══════════ -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="wrap_content"
         android:background="@color/box"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingEnd="8dp">
+        android:paddingTop="11dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="9dp">
 
-        <TextView
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:letterSpacing="0.02"
-            android:text="@string/app_title"
-            android:textColor="@color/accent"
-            android:textSize="21sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <!-- 日志：小图标 -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.02"
+                    android:text="@string/app_title"
+                    android:textColor="@color/accent"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginBottom="4dp"
+                    android:letterSpacing="0.3"
+                    android:text="@string/app_tag"
+                    android:textColor="@color/fg_dim"
+                    android:textSize="10sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:letterSpacing="0.05"
+                android:text="@string/app_sub"
+                android:textColor="@color/fg_dim"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- 日志：完整运行日志在【日志】页看，主页只给最后一行摘要 -->
         <ImageButton
             android:id="@+id/btnLog"
             android:layout_width="44dp"
@@ -40,268 +83,89 @@
             android:contentDescription="@string/log_page"
             android:padding="10dp"
             android:scaleType="fitCenter"
-            app:tint="@color/fg"
-            android:src="@drawable/ic_log" />
-
-        <!-- 设置：小图标 -->
-        <ImageButton
-            android:id="@+id/btnSettings"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/settings"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
-            app:tint="@color/fg"
-            android:src="@drawable/ic_settings" />
+            android:src="@drawable/ic_log"
+            app:tint="@color/fg" />
     </LinearLayout>
 
-    <ScrollView
-        android:id="@+id/scroll"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:fillViewport="true">
+        android:layout_weight="1">
 
+        <include
+            layout="@layout/panel_run" />
+
+        <include
+            layout="@layout/panel_stats" />
+
+        <include
+            layout="@layout/panel_start" />
+
+        <include
+            layout="@layout/panel_settings" />
+
+        <!-- ═══════════ 悬浮切换栏 ═══════════ -->
+        <!--
+          半透明卡片，浮在内容之上。试过真模糊（截背后那一条 + 采样放大 + 盒式模糊），
+          效果和代价都不划算，砍掉了 —— 85% 不透明已经够轻，也不会糊得看不清字。
+        -->
         <LinearLayout
+            android:id="@+id/navBar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_height="56dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/nav_bar"
+            android:elevation="10dp"
+            android:orientation="horizontal"
+            android:padding="5dp">
 
             <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/app_sub"
+                android:id="@+id/tabRun"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/seg_selected"
+                android:gravity="center"
+                android:text="@string/nav_run"
+                android:textColor="@color/on_accent"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tabStats"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/seg_normal"
+                android:gravity="center"
+                android:text="@string/nav_stats"
                 android:textColor="@color/fg_dim"
                 android:textSize="14sp" />
 
-            <!-- ═══════════ 跑步参数 ═══════════ -->
             <TextView
-                style="@style/Label"
-                android:layout_marginTop="16dp"
-                android:text="@string/l_area" />
-
-            <Spinner
-                android:id="@+id/spArea"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:background="@drawable/box"
-                android:paddingStart="6dp"
-                android:paddingEnd="6dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:orientation="horizontal">
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/Label"
-                        android:text="@string/l_pace" />
-
-                    <EditText
-                        android:id="@+id/etPace"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/box"
-                        android:hint="5:45"
-                        android:inputType="textNoSuggestions"
-                        android:maxLines="1"
-                        android:padding="10dp"
-                        android:textColor="@color/fg"
-                        android:textColorHint="@color/fg_dim"
-                        android:textSize="19sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/Label"
-                        android:text="@string/l_dist" />
-
-                    <EditText
-                        android:id="@+id/etDist"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/box"
-                        android:hint="2.0"
-                        android:inputType="numberDecimal"
-                        android:maxLines="1"
-                        android:padding="10dp"
-                        android:textColor="@color/fg"
-                        android:textColorHint="@color/fg_dim"
-                        android:textSize="19sp" />
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- 配速容差：平均配速被夹在「上面的配速 ± 这个值」之内 -->
-            <TextView
-                style="@style/Label"
-                android:layout_marginTop="16dp"
-                android:text="@string/l_pace_tol" />
-
-            <EditText
-                android:id="@+id/etTol"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/box"
-                android:hint="20"
-                android:inputType="number"
-                android:maxLines="1"
-                android:padding="10dp"
-                android:textColor="@color/fg"
-                android:textColorHint="@color/fg_dim"
-                android:textSize="19sp" />
-
-            <TextView
-                android:id="@+id/tvPaceWindow"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                android:text=""
+                android:id="@+id/tabStart"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/seg_normal"
+                android:gravity="center"
+                android:text="@string/nav_start"
                 android:textColor="@color/fg_dim"
-                android:textSize="13sp" />
+                android:textSize="14sp" />
 
-            <!-- 电池优化状态：深度 Doze 会连 wake lock 一起忽略，只有进白名单才彻底 -->
             <TextView
-                android:id="@+id/tvBattery"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/box"
-                android:lineSpacingExtra="4dp"
-                android:padding="12dp"
-                android:text="@string/batt_unknown"
+                android:id="@+id/tabSettings"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/seg_normal"
+                android:gravity="center"
+                android:text="@string/nav_settings"
                 android:textColor="@color/fg_dim"
-                android:textSize="13sp" />
-
-            <!-- 主按钮：开始 ↔ 结束，同一个 -->
-            <Button
-                android:id="@+id/btnRun"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/btn_solid"
-                android:text="@string/b_run"
-                android:textAllCaps="false"
-                android:textColor="@color/on_accent"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <!-- ─────────── 仪表盘 ─────────── -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/box"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/dash_progress"
-                        android:textColor="@color/fg_dim"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:id="@+id/tvPercent"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0%"
-                        android:textColor="@color/accent"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
-
-                <ProgressBar
-                    android:id="@+id/bar"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="12dp"
-                    android:layout_marginTop="8dp"
-                    android:max="100"
-                    android:progress="0" />
-
-                <TextView
-                    android:id="@+id/tvDistance"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/dash_idle_distance"
-                    android:textColor="@color/fg"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvTime"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dash_idle_time"
-                    android:textColor="@color/fg"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:id="@+id/tvPaceInfo"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dash_idle_pace"
-                    android:textColor="@color/fg_dim"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/tvBatches"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dash_idle_batch"
-                    android:textColor="@color/fg_dim"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/tvServer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:text="@string/dash_idle_server"
-                    android:textColor="@color/ok"
-                    android:textSize="15sp" />
-            </LinearLayout>
-
-            <!-- 日志只在【日志】页看，这里给个摘要入口 -->
-            <TextView
-                android:id="@+id/tvLastLog"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:background="@drawable/box"
-                android:ellipsize="end"
-                android:maxLines="3"
-                android:padding="12dp"
-                android:text="@string/log_hint_short"
-                android:textColor="@color/log"
-                android:textSize="13sp" />
-
+                android:textSize="14sp" />
         </LinearLayout>
-    </ScrollView>
+    </FrameLayout>
 </LinearLayout>

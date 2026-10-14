@@ -15,8 +15,8 @@ android {
         applicationId = "com.whale.campusrun"
         minSdk = 24
         targetSdk = 34
-        // 版本号由版本分支推导，公式与清单见 AGENT.md §5.1 / §5.2
-        // 当前版本分支 V1.10.1 → MAJOR*10000 + MINOR*100 + PATCH
+        // 版本号直接写在这里，不依赖任何分支。规则与清单见 AGENT.md §5.1 / §5.2
+        // versionCode = MAJOR*10000 + MINOR*100 + PATCH
         versionCode = 11001
         versionName = "1.10.1"
     }

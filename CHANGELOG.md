@@ -1,7 +1,7 @@
 # Changelog
 
 从 **v1.3** 起记录（v1.3 是第一个带 Android App 的版本，之前只有命令行脚本）。
-**1.9.0 起改用语义化版本**（`MAJOR.MINOR.PATCH`），版本号取自版本分支，规则见 [AGENT.md §5.1](AGENT.md#51-版本号规则semver-20)。
+**1.9.0 起改用语义化版本**（`MAJOR.MINOR.PATCH`），规则见 [AGENT.md §5.1](AGENT.md#51-版本号规则semver)。
 
 > v1.3~1.8 之间的中间号（1.5 / 1.6 / 1.7）当时建过包但没发布，已并入 1.8。
 

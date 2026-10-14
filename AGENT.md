@@ -12,7 +12,7 @@
 | 名称 | 鲸鲸约跑（CampusRun） |
 | 一句话 | 微信小程序「重邮智慧体育」的打卡工具，**安卓单机版** |
 | 作者 | WilliTourt的蓝色大肥鱼 🐟 |
-| 当前版本 | **v1.10.1**（`versionCode 11001` / `versionName "1.10.1"`）—— 由版本分支 `V1.10.1` 推导，规则见 [§5.1](#51-版本号规则semver-20) |
+| 当前版本 | **v1.10.1**（`versionCode 11001` / `versionName "1.10.1"`）—— 每版一个 tag，规则见 [§5.1](#51-版本号规则semver) |
 | License | MIT |
 | 仓库 | https://github.com/WilliTourt/CQUPT-MockRunning |
 | 目标服务 | `https://sport.cqupt.edu.cn/new_wxapp`（重邮智慧体育小程序后端） |
@@ -142,73 +142,60 @@ python refs/verify_pace_profile.py    # 配速起伏 × 3 场地 × 4 配速
 ## 5. 代码约定
 
 - 注释和用户可见文案一律用中文；注释写**「为什么这么做」**，不写「这行在干什么」。
-- **版本号必须按 5.1 的规则从版本分支推导**，不要凭感觉手写；要改哪些文件见 5.2 的清单。
+- **版本号按 5.1 的语义化规则进位**（该动 MAJOR / MINOR / PATCH 哪一位），
+  要改哪些文件见 5.2 的清单。**不需要建版本分支** —— 发布时打 tag 就行。
 - 不引入新依赖前先想清楚 —— 这个项目的卖点之一就是零依赖。
 - 反编译 / 抓包得到的新结论写进 `refs/FINDINGS.md`，别散落在聊天记录里。
 - 一次性的分析脚本可以放在 `refs/`，但产物（解包目录、strings dump）不要提交，见 `.gitignore`。
 
-### 5.1 版本号规则（SemVer 2.0）
+### 5.1 版本号规则（SemVer）
 
-版本号**不是随手写的，而是从「当前开发分支所属的版本分支」引用过来的**：
-仓库里的 `V1.9.0` / `V2.0.0` 这类分支就是版本源，`main` 与 `dev-*` 都是它的下游。
+版本号**直接写在 `android-app/app/build.gradle.kts` 里，不依赖任何分支**。
+发布时打一个同名 tag，tag 才是「这份 Release 对应哪份代码」的锚点。
 
-**引用来源 —— 按下面的顺序定出唯一的版本分支：**
+> 早期版本写过一套「从版本分支 `V1.10.1` 推导版本号」的规则（找离 `HEAD` 最近的
+> `V*` 分支、并列时取最大……）。**实践下来没必要** ——
+> 一个人开发、`main` 上直接改就行，`V1.10.1` 只是 `main` 的一份多余副本，
+> 删掉不会丢失任何信息。真要同时维护多条版本线时再加分支不迟。
+> 真正干活的是 **tag**：每个版本一个，`git tag` 一看就知道。
 
-1. 快进关系：找出祖先里有 `HEAD` 的版本分支（`git merge-base --is-ancestor <分支> HEAD`），
-   其中**离 `HEAD` 最近**的那个就是当前版本分支。
-2. 并列分叉时，取 `<major>.<minor>.<patch>` 数值最大的一个（用 `sort -V`，不要按字典序）。
-3. 若一个都没有（新开的开发分支还没挂到任何版本分支上），
-   **不要猜版本号**：要么先按「开新版本」建好版本分支再动版本，
-   要么沿用上一版的 `versionName` 并在 `CHANGELOG` 的 `[未发布]` 段落记录改动。
-
-**语义化版本 2.0（`MAJOR.MINOR.PATCH`）—— 只增不减，一旦提交不再修改：**
+**语义化版本（`MAJOR.MINOR.PATCH`）—— 只增不减，一旦发布不再修改：**
 
 | 位置 | 什么时候动 | 例子 |
 |---|---|---|
-| `MAJOR` | 对外行为或数据格式**不兼容**的改动（老配置/老流程会坏掉） | 1.9.0 → 2.0.0 |
+| `MAJOR` | 对外行为或数据格式**不兼容**的改动（老配置 / 老流程会坏掉） | 1.9.0 → 2.0.0 |
 | `MINOR` | **向后兼容**地加功能、加选项 | 1.9.0 → 1.10.0 |
 | `PATCH` | **向后兼容**地修缺陷，不改接口与行为约定 | 1.9.0 → 1.9.1 |
 
-- 预发布/构建元数据按标准写法 `1.9.0-rc.1`、`1.9.0+build.5`，
-  **`versionName` 可以用，`versionCode` 一律取主干三段**（见下）。
-- `MINOR` 是数字不是字符串：`1.10.0` 比 `1.9.0` 新，比较时用 `sort -V`。
-- 版本分支命名 = `V` + `versionName`，三段齐全（`V1.9.0`，不要写 `V1.9`）。
-
-**映射到 Android（三段必须同源，改一处就要改全部）：**
+**映射到 Android（两段必须同源，改一处就要改全部）：**
 
 ```kotlin
-versionName = "1.9.0"                       // 版本分支名去掉前导 V，原样照抄
-versionCode = 10900                         // MAJOR*10000 + MINOR*100 + PATCH
+versionName = "1.10.1"     // 手写
+versionCode = 11001        // MAJOR*10000 + MINOR*100 + PATCH
 ```
 
-`versionCode` 用这个公式是为了让**数字大小和版本新旧一致**（Google Play 只认单调递增），
-`MINOR`/`PATCH` 各留两位，`1.9.0 → 10900`、`1.10.0 → 11000`、`2.0.0 → 20000`。
-`versionCode` 前补零并无意义，它是整数。
+`versionCode` 用这个公式是为了让**数字大小和版本新旧一致**（Android 只认单调递增），
+`MINOR` / `PATCH` 各留两位：`1.9.0 → 10900`、`1.10.0 → 11000`、`2.0.0 → 20000`。
+`MINOR` 是数字不是字符串，`1.10.0` 比 `1.9.0` 新。
 
-<details>
-<summary>一条命令定出版本（在 <code>android-app/</code> 下跑）</summary>
+**发布时打 tag**（`gh release create` 会自动建，不用手动 `git tag`）：
 
 ```bash
-cur=$(git rev-parse --abbrev-ref HEAD)
-base=$(for b in $(git branch --list 'V[0-9]*' --format='%(refname:short)'); do
-         git merge-base --is-ancestor "$b" HEAD 2>/dev/null &&
-           printf '%s %s %s\n' "$(git rev-list --count "$b"..HEAD)" "${b#V}" "$b"
-       done | sort -k1,1n -k2,2rV | head -1 | awk '{print $3}')
-echo "分支 $cur → 版本分支 ${base:-<无>}"
-IFS=. read -r M m p <<< "${base#V}"
-printf 'versionName = "%s.%s.%s"\nversionCode = %d\n' "$M" "$m" "$p" "$((M*10000 + m*100 + p))"
+gh release create v1.10.1 "jingjing-yuepao-v1.10.1.apk" \
+  --title "鲸鲸约跑 v1.10.1" --notes-file notes.md
 ```
 
-> 取「离 HEAD 最近」用的是 `git rev-list --count <版本分支>..HEAD`（越小越近），
-> 并列时用 `sort -V` 取版本最大者，与规则 1、2 完全一致。
+tag 名 = `v` + `versionName`，和 Release 一一对应。
 
-</details>
+> ⚠️ 附件名**必须是纯英文**：GitHub 会把非 ASCII 字符剥掉，
+> `鲸鲸约跑-v1.10.1.apk` 会变成 `-v1.10.1.apk`。
+> 而且 `#标签` 语法只设 label，**不改真实文件名**，别指望它。
 
 ### 5.2 改版本号时必须同步的位置
 
 | 位置 | 改什么 |
 |---|---|
-| `android-app/app/build.gradle.kts` | `versionCode`（公式值）、`versionName`（版本分支） |
+| `android-app/app/build.gradle.kts` | `versionName`（手写）、`versionCode`（公式值） |
 | `android-app/app/src/main/AndroidManifest.xml` | `<meta-data android:name="version">` = `versionName` |
 | `CHANGELOG.md` | 新增 `## [x.y.z] — 日期 · 摘要` 段落，并在文末补对应的引用式链接 |
 | `AGENT.md` §1 表格 | 「当前版本」一行 |

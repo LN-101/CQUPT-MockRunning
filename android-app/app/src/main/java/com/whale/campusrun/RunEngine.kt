@@ -566,7 +566,14 @@ class RunEngine(private val api: Api, private val l: RunListener) {
 
         l.onState(state.copy(
             phase = if (er.ok) "已完成" else "已结束但返回异常",
-            pointsDone = points.size,
+            // 收尾时**不要**沿用 metersDone 的旧值 —— 那是上传过程中从服务端累计来的，
+            // 总比目标少一点（最后一次轮询之后还落了几个批次没算进去），
+            // 停在它上面就成了「已完成 99%」，看着像没跑完。
+            // 整条轨迹就是 metersTotal 米，跑完就是 100%；服务端那个略小的数
+            // 另有「服务端累计」一行在显示，不会丢。
+            metersDone = state.metersTotal,
+            pointsDone = state.pointsTotal,
+            batchesDone = state.batchesTotal,
             elapsedSec = ((System.currentTimeMillis() - startMs) / 1000).toInt(),
             etaSec = 0,
             finished = true

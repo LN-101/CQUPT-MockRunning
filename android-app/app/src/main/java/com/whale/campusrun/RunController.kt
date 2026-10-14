@@ -8,11 +8,21 @@
 package com.whale.campusrun
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import java.util.concurrent.CopyOnWriteArrayList
 
 object RunController {
 
     private const val MAX_LOG = 400
+
+    /**
+     * 跑完（或失败）之后，仪表盘停留这么久让人看清最终成绩，然后自己回到空闲态。
+     *
+     * 不留的话就会停在最后那一帧上 —— 「已完成 99%」挂在主页不走，
+     * 得等系统把进程杀掉再进来才干净。那是碰运气，不是收尾。
+     */
+    private const val IDLE_RESET_DELAY_MS = 6000L
 
     /** 由 MainActivity 在 onCreate 时塞进来，用于拉起前台服务。 */
     @Volatile
@@ -41,6 +51,29 @@ object RunController {
     private var thread: Thread? = null
     private var engine: RunEngine? = null
 
+    /** 主线程 Handler，只用来做「延迟归零」。 */
+    private val ui = Handler(Looper.getMainLooper())
+
+    /** 延迟归零的任务。`start()` 时要撤掉，免得新一轮刚起来就被它清掉。 */
+    private val idleReset = Runnable { resetDashboard() }
+
+    /**
+     * 把仪表盘清回空闲态。
+     *
+     * **不动日志缓冲** —— 那是这一轮跑步的记录，跑完正是要翻它的时候。
+     * 日志只在新一轮 `start()` 时清。
+     */
+    fun resetDashboard() {
+        if (running) return
+        state = RunState()
+        emitState()
+    }
+
+    private fun scheduleIdleReset() {
+        ui.removeCallbacks(idleReset)
+        ui.postDelayed(idleReset, IDLE_RESET_DELAY_MS)
+    }
+
     // ---------------------------------------------------------------- 观察者
 
     fun addListener(l: RunListener) {
@@ -68,6 +101,8 @@ object RunController {
         if (running) return
         running = true
         cancelling = false
+        // 上一轮可能还排着一个延迟归零，先撤掉，不然新一轮刚起来就被它清空
+        ui.removeCallbacks(idleReset)
         logBuffer.clear()
         state = RunState(phase = "准备中", paceSecKm = paceSecKm, metersTotal = targetM)
         emitState()
@@ -103,6 +138,8 @@ object RunController {
                 // 否则界面最后一次收到的是 running 还是 true 的那一帧，
                 // 按钮就永远停在"结束打卡"上变不回去了。
                 emitState()
+                // 让「已完成 / 失败」的成绩在屏幕上留一会儿，然后自己回空闲态
+                scheduleIdleReset()
                 appCtx?.let { c ->
                     try {
                         c.stopService(android.content.Intent(c, RunService::class.java))
@@ -161,12 +198,6 @@ object RunController {
 
     /** 供外部（Activity）写日志，不落缓冲。 */
     fun logFromUi(line: String) = appendLog(line)
-
-    fun reset() {
-        if (running) return
-        synchronized(logBuffer) { logBuffer.clear() }
-        state = RunState()
-    }
 }
 
 internal object JsClock {

@@ -16,9 +16,9 @@ android {
         minSdk = 24
         targetSdk = 34
         // 版本号由版本分支推导，公式与清单见 AGENT.md §5.1 / §5.2
-        // 当前版本分支 V1.10.0 → MAJOR*10000 + MINOR*100 + PATCH
-        versionCode = 11000
-        versionName = "1.10.0"
+        // 当前版本分支 V1.10.1 → MAJOR*10000 + MINOR*100 + PATCH
+        versionCode = 11001
+        versionName = "1.10.1"
     }
 
     buildTypes {

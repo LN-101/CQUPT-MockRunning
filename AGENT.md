@@ -12,7 +12,7 @@
 | 名称 | 鲸鲸约跑（CampusRun） |
 | 一句话 | 微信小程序「重邮智慧体育」的打卡工具，**安卓单机版** |
 | 作者 | WilliTourt的蓝色大肥鱼 🐟 |
-| 当前版本 | **v1.10.0**（`versionCode 11000` / `versionName "1.10.0"`）—— 由版本分支 `V1.10.0` 推导，规则见 [§5.1](#51-版本号规则semver-20) |
+| 当前版本 | **v1.10.1**（`versionCode 11001` / `versionName "1.10.1"`）—— 由版本分支 `V1.10.1` 推导，规则见 [§5.1](#51-版本号规则semver-20) |
 | License | MIT |
 | 仓库 | https://github.com/WilliTourt/CQUPT-MockRunning |
 | 目标服务 | `https://sport.cqupt.edu.cn/new_wxapp`（重邮智慧体育小程序后端） |

@@ -5,9 +5,11 @@
 微信小程序「重邮智慧体育」的打卡工具，**安卓单机版**。
 不申请定位权限，不连服务器，不需要登录，不给别人用。
 
-![icon](docs/img/icon.png)
+<p align="center">
+  <img src="docs/img/icon.png" width="200" alt="鲸鲸约跑">
+</p>
 
-**当前版本 v1.9.1** · [变更记录](CHANGELOG.md) · [技术细节](#六技术细节) · [文件说明](#七文件说明)
+**当前版本 v1.9.1** · [**下载 APK**](https://github.com/WilliTourt/CQUPT-MockRunning/releases/latest) · [变更记录](CHANGELOG.md) · [技术细节](#六技术细节) · [文件说明](#七文件说明)
 
 ---
 

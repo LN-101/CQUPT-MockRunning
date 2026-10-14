@@ -52,7 +52,7 @@ CQUPT-MockRunning/
 │   ├── app/src/main/java/com/whale/campusrun/
 │   │   ├── Api.kt            重邮智慧体育 API 客户端（无签名、明文 JSON）
 │   │   ├── App.kt            Application 入口，只负责在任何 Activity 前定好主题
-│   │   ├── AreaStore.kt      场地缓存单例：设置页拉到 → 主页 onResume 直接取用
+│   │   ├── AreaStore.kt      场地缓存单例：上手页拉到 → 主页 onResume 直接取用
 │   │   ├── MainActivity.kt   **唯一的主界面**：共享顶栏 + 四个 panel + 悬浮切换栏
 │   │   ├── panel_*.xml      四页的布局（run / stats / start / settings），被 activity_main include
 │   │   ├── RunController.kt  单例，持有跑步线程，切主题重建 Activity 不丢进度

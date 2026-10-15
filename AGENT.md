@@ -253,7 +253,6 @@ refs/openid_hunt.txt        同上
 refs/*.flow                 抓包记录
 refs/wechat_cache/          微信缓存拷贝
 refs/unpacked/              小程序解包结果（可用 wxapkg_unpack.py 重现）
-refs/collector_strings*.txt 第三方工具 strings dump
 run/                        运行输出
 local.properties            Android 本机 SDK 路径
 *.keystore  *.jks           签名材料

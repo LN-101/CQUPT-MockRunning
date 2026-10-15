@@ -290,7 +290,6 @@ o.list[s].pace = (o.list[s].timeConsuming / 60 / o.list[s].mileage).toFixed(2);
 - `jpq` 类型区域只做 `wx.vibrateShort({type:"heavy"})`，连震 10 次提醒你
 
 **结论：人脸比对在场地物理摄像头上，小程序不参与，也无法从客户端绕过。**
-这一点和《某商业方案》教程里"人脸检测需要你本人在摄像头下正常完成"完全吻合。
 
 ---
 
@@ -349,22 +348,16 @@ MMKV 存储（767 + 642 字节）里应当就是 `openid` / `token` / `logs` / `
 
 ---
 
-## 9. 与《某商业方案》商业方案的对照
+## 9. 不需要定位注入层
 
-| 环节 | 商业方案 | 本报告方案 |
-|---|---|---|
-| 身份获取 | 第三方工具 读 PC 微信缓存 → 传云端 | 同一思路：读 `openid`，可本地完成 |
-| 运行位置 | 云端服务器代跑 | 本地或云端均可（纯 HTTP） |
-| GPS 伪造 | **不需要** | **不需要** |
-| 签名逆向 | **不需要**（本来就没签名） | **不需要** |
-| 人脸 | 本人到场扫脸 | 同 |
-| 收费点 | 按次卖注册码/兑换令牌 | — |
+**这个系统根本不看真实 GPS。** 轨迹点由客户端直接 POST，服务端不回采、不校验来源。
 
-**验证了：我以为要做的 iOS/Android 定位注入层是多余的。这个系统根本不看真实 GPS。**
+早期设想的 iOS / Android 定位注入层是**多余**的 —— 不用碰手机定位权限，
+纯 HTTP 就能做完。指纹、签名、设备绑定这些通常的拦路虎，这里一个都没有。
 
 ---
 
-# 附：实机验证与《某商业方案》第三方工具分析
+# 附：实机验证
 
 ## 10. 实测结果（用真实账号跑通）
 
@@ -398,43 +391,11 @@ GET /sportRecord/mobile/list/1/3
 `jpq` 不是人脸区，是禁跑区。之前判断错了，实测纠正。
 小程序在进入 `jpq` 时 `vibrateShort` 连震，是警告你跑进禁跑区了。
 
-## 11. 第三方工具逆向（`第三方工具` v0.1.7）
 
-| 项 | 结果 |
-|---|---|
-| 语言 | **Go 1.25.0**，x64，静态编译，无加壳 |
-| 框架 | **Wails v2**（Go + WebView2，前端 HTML/JS 打进二进制） |
-| 模块名 | `第三方工具`，版本 0.1.7 |
-| 构建机 | `F:/(已删除)/第三方工具/`、`E:/Zcode_Runtime/2026-0927-go/` |
-| 上报地址 | `https://example.invalid/v1/cred/claim`（`claim.Do`）<br>`claim.Query` 对应「只查询是否已开通（不采集）」 |
-| 传输 | `claim.pinnedTransport`，有 **SPKI pin**（`SPKI pin 不匹配（%s`） |
-| 上报字段 | `Openid` / `CredID` / `Detail` / `SeenAt` |
+## 11. 本机零解密提取 openid（完整复现）
 
-### 关键：它不读 MMKV，也不解密
-
-全包扫描 `mmkv` / `usrmmkvstorage` / `leveldb` / `indexeddb` / `applet.db` —— **0 命中**。
-
-它读的是 **Chromium 的 HTTP 响应缓存**：
-
-```
-%APPDATA%\Tencent\xwechat\radium\web\profiles\webview_<hash>\Cache\Cache_Data\
-      data_1     ← checkBinding 的完整响应体，明文 JSON
-      data_3     ← 历史记录列表，明文 JSON
-```
-
-路径组件 `APPDATA` / `Roaming` / `Tencent` / `xwechat` 是分开的 Go 字符串字面量，
-在字符串池里连续存放。这就是它报错文案里说的「**profiles 目录为空**」。
-
-**必须完全退出微信的原因**：Chromium 一直占着这些缓存文件，不退出读不到最新内容。
-
-### 尾号从哪来
-
-UI 上显示的 `****pFR4` 就是 **openid 的最后 4 位**。
-本机实测：`oXXXXXXXXXXXXXXXXXXXXXXXXXXX` → `****XXXX`，格式一致。
-
-## 12. 本机零解密提取 openid（完整复现）
-
-不需要抓包，不需要 MMKV 解密，不用联网：
+不需要抓包，不需要 MMKV 解密，不用联网。
+**但要先把微信完全退出** —— Chromium 一直占着这些缓存文件，不退出读不到最新内容。
 
 ```
 %APPDATA%\Tencent\xwechat\radium\web\profiles\webview_<hash>\Cache\Cache_Data\data_1
@@ -450,16 +411,3 @@ studentNo = 20XXXXXXXX
 python get_openid.py          # 列出所有找到的身份
 python get_openid.py --first  # 只输出 openid
 ```
-
-### 与商业方案对比
-
-| 环节 | 《某商业方案》 | 本方案 |
-|---|---|---|
-| 取 openid | 第三方工具 读同一份 Chromium 缓存 → 传给云端服务器 | `get_openid.py` 本地读 → 直接填进 App |
-| 是否需要服务器 | **需要**（云端代跑） | **不需要** |
-| 是否需要注册/付费 | 需要（注册码 + 兑换令牌） | 不需要 |
-| 运行位置 | 云端服务器 | 手机本地 |
-| 证书校验 | 自建 SPKI pin | 用系统 CA 校验官方站点 |
-| 人脸 | 本人到场 | 本人到场 |
-
-**本方案把中间商去掉了：同一份缓存、同样的读法，但全部在本地完成。**

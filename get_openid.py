@@ -17,7 +17,7 @@ openid 是你在「重邮智慧体育」小程序里的身份编号。
 
 里面就有 openid。不用解密、不用抓包、不联网。
 
-注意（Linux 常见坑）add form gufandf
+注意（Linux 常见坑）add from gufandf
 ------------------
 Linux 版微信允许把「数据目录」改到任意位置。改过之后 ~/.xwechat
 只是个空壳，真实缓存在类似下面的地方：

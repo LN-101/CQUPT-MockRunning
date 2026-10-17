@@ -17,12 +17,27 @@ openid 是你在「重邮智慧体育」小程序里的身份编号。
 
 里面就有 openid。不用解密、不用抓包、不联网。
 
+注意（Linux 常见坑）
+------------------
+Linux 版微信允许把「数据目录」改到任意位置。改过之后 ~/.xwechat
+只是个空壳，真实缓存在类似下面的地方：
+
+  ~/Documents/WeChat_Data/home/.xwechat/radium/web/profiles/...
+
+若只看 ~/.xwechat 就会一直报「缓存里没有 openid」。本脚本会在
+已知路径没命中时自动扫描家目录（约 0.1 秒），把这类重定向目录也找出来。
+
 使用
 ----
 1. 电脑安装微信并登录
 2. 电脑微信打开一次「重邮智慧体育」小程序，完成登录绑定
 3. 命令行执行：python3 get_openid.py
 4. 将提取到的 openid 填入打卡脚本或 App 即可
+
+可选参数：
+  python3 get_openid.py <目录>   只查指定目录（不触发自动扫描）
+  python3 get_openid.py --all    强制执行自动扫描
+  python3 get_openid.py --verbose  打印出每个被检查的缓存目录
 """
 
 import os
@@ -178,13 +193,15 @@ def cache_dirs(roots=None):
             found.append(cd if os.path.isdir(cd) else root)
             continue
 
-        profiles = os.path.join(root, "radium", "web", "profiles")
-        if not os.path.isdir(profiles):
-            alt_profiles = os.path.join(root, "web", "profiles")
-            if os.path.isdir(alt_profiles):
-                profiles = alt_profiles
-
-        if os.path.isdir(profiles):
+        # 两种布局都要试：4.x 是 <root>/radium/web/profiles，
+        # 也有环境是 <root>/web/profiles。以前只取其中一个，
+        # 把根目录直接指到 ~/.xwechat 时就可能漏掉缓存。
+        for profiles in (
+            os.path.join(root, "radium", "web", "profiles"),
+            os.path.join(root, "web", "profiles"),
+        ):
+            if not os.path.isdir(profiles):
+                continue
             for name in os.listdir(profiles):
                 p = os.path.join(profiles, name)
                 if not os.path.isdir(p):
@@ -199,11 +216,95 @@ def cache_dirs(roots=None):
     return found
 
 
-def scan():
+# 自动发现时跳过的目录：体积大且与微信无关
+_SKIP_NAMES = {
+    "node_modules", ".git", ".svn", ".hg", "site-packages", "__pycache__",
+    "Steam", "steamapps", "snap", ".npm", ".cargo", ".rustup", ".gradle",
+    ".m2", ".conda", ".nvm", ".pyenv", ".cache", ".Trash", ".local/share/Steam",
+}
+
+
+def _iter_cache_profiles(profiles_dir):
+    """从 <...>/radium/web/profiles 里取出各 profile 的 Cache_Data。"""
+    out = []
+    try:
+        names = os.listdir(profiles_dir)
+    except OSError:
+        return out
+    for name in names:
+        p = os.path.join(profiles_dir, name)
+        if not os.path.isdir(p):
+            continue
+        d = os.path.join(p, "Cache", "Cache_Data")
+        if os.path.isdir(d):
+            out.append(d)
+            continue
+        d2 = os.path.join(p, "Cache")
+        if os.path.isdir(d2):
+            out.append(d2)
+    return out
+
+
+def discover_cache_dirs(search_roots=None, max_depth=6):
+    """兜底自动发现。
+
+    微信 Linux 版允许把「数据目录」重定向到任意位置（例如
+    ~/Documents/WeChat_Data/home，此时真实数据在
+    <数据目录>/.xwechat/radium/web/profiles）。这种路径无法反查，
+    只能扫。以「存在 radium/web/profiles（或 web/profiles）」为信号，
+    命中后不再深入该分支，避免把整个家目录走一遍。
+    """
+    if search_roots is None:
+        search_roots = [os.path.expanduser("~")]
+
+    found = []
+    seen_profiles = set()
+
+    def walk(base, depth):
+        if depth > max_depth:
+            return
+        try:
+            entries = list(os.scandir(base))
+        except OSError:
+            return
+        for e in entries:
+            if not e.is_dir(follow_symlinks=False):
+                continue
+            name = e.name
+            if name in _SKIP_NAMES:
+                continue
+            path = e.path
+            # 命中微信 web 容器目录：<x>/radium/web/profiles 或 <x>/web/profiles
+            if name == "web" and os.path.isdir(os.path.join(path, "profiles")):
+                prof = os.path.join(path, "profiles")
+                if prof in seen_profiles:
+                    continue
+                seen_profiles.add(prof)
+                found.extend(_iter_cache_profiles(prof))
+                continue  # 已经是微信容器，不再深入
+            # 直接命中 profiles 目录
+            if name == "profiles" and os.path.basename(base) == "web":
+                if path not in seen_profiles:
+                    seen_profiles.add(path)
+                    found.extend(_iter_cache_profiles(path))
+                continue
+            walk(path, depth + 1)
+
+    for r in search_roots:
+        if os.path.isdir(r):
+            walk(r, 0)
+
+    return found
+
+
+def scan(dirs=None):
     cqupt_found = {}
     other_found = {}
 
-    for d in cache_dirs():
+    if dirs is None:
+        dirs = cache_dirs()
+
+    for d in dirs:
         if not os.path.isdir(d):
             continue
 
@@ -311,26 +412,56 @@ def main():
     print()
 
     active_roots = [r for r in WECHAT_ROOTS if os.path.isdir(r)]
-    if not active_roots:
-        print("[X] 没找到电脑版微信的数据目录。")
-        print("    检测过的路径：")
-        for r in WECHAT_ROOTS:
-            print("      - %s" % r)
-        print()
-        print("    请确保已安装电脑版微信并登录。")
-        print("    提示：您也可以在命令行指定微信目录路径，例如：")
-        print("      python3 get_openid.py ~/.xwechat")
-        return 2
 
-    print("[*] 微信数据目录：%s" % active_roots[0])
-
+    # 已知路径 + 自动发现合并。微信 Linux 版允许把数据目录重定向到任意位置，
+    # 只靠硬编码清单会漏，所以总要兜底扫一次。
     caches = cache_dirs(active_roots)
+
+    search_roots = [os.path.expanduser("~")]
+    # 允许命令行显式指定搜索起点（放在搜索前，避免全盘走一遍）
+    for arg in sys.argv[1:]:
+        if not arg.startswith("-") and os.path.isdir(arg):
+            search_roots.insert(0, os.path.abspath(arg))
+
+    # 关键：已知路径下没扫到结果时也要自动发现。
+    # 微信 Linux 版允许把数据目录重定向到任意位置，此时 ~/.xwechat
+    # 只是个空壳，真实缓存在别处。只在「没找到缓存目录」时才扫
+    # 是不够的 —— 空壳目录会让程序误以为找对了地方。
+    need_scan = ("--all" in sys.argv) or (not caches) or (not scan(caches))
+    if need_scan:
+        scanned = discover_cache_dirs(search_roots)
+        added = [d for d in scanned if d not in caches]
+        caches.extend(added)
+        if scanned:
+            print("[*] 自动发现 %d 个缓存目录（含被重定向的数据目录）" % len(scanned))
+            shown = scanned if "--verbose" in sys.argv else scanned[:3]
+            for d in shown:
+                print("      - %s" % d)
+            if len(scanned) > len(shown):
+                print("      … 其余 %d 个用 --verbose 查看" % (len(scanned) - len(shown)))
+
     if not caches:
+        if not active_roots:
+            print("[X] 没找到电脑版微信的数据目录，自动搜索也没有找到微信缓存。")
+            print("    检测过的路径：")
+            for r in WECHAT_ROOTS:
+                print("      - %s" % r)
+            print()
+            print("    请确保已安装电脑版微信并登录。")
+            print("    也可以直接指定微信数据目录，例如：")
+            print("      python3 get_openid.py ~/.xwechat")
+            return 2
         print("[X] 没找到小程序缓存目录。")
         print("    请在电脑微信里打开一次「重邮智慧体育」小程序，再重试。")
         return 3
 
-    hits = scan()
+    print("[*] 微信数据目录：%s" % (active_roots[0] if active_roots else caches[0]))
+    print("[*] 共检查 %d 个小程序缓存目录" % len(caches))
+    if "--verbose" in sys.argv:
+        for d in caches:
+            print("      - %s" % d)
+
+    hits = scan(caches)
     if not hits:
         print("[X] 缓存里没有找到 openid。")
         print("    说明尚未在电脑微信中打开并登录过该小程序。")
